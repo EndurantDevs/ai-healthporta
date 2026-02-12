@@ -22,22 +22,22 @@ Public integration pack for connecting AI clients to the HealthPorta MCP server.
 ### Gemini
 1. Import `gemini-extension.json`.
 2. Authenticate with OAuth when prompted.
-3. Verify with `healthcheck` and `auth_status`.
+3. Verify with `healthporta_healthcheck` and `healthporta_auth_status`.
 
 ### Claude
 1. Use `providers/claude/plugin/.mcp.json` as MCP config.
 2. Authenticate with OAuth.
-3. Verify with `healthcheck`.
+3. Verify with `healthporta_healthcheck`.
 
 ### Cursor
 1. Use `providers/cursor/plugin/mcp.json` as MCP config.
 2. Authenticate with OAuth.
-3. Verify with `healthcheck`.
+3. Verify with `healthporta_healthcheck`.
 
 ### Codex/CLI
 1. Add server URL from `examples/codex/mcp.json`.
 2. Run client auth command.
-3. Verify with `healthcheck`.
+3. Verify with `healthporta_healthcheck`.
 
 ## Public OAuth/Discovery Endpoints
 
