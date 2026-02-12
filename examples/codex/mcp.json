@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "healthporta": {
+      "type": "http",
+      "url": "https://mcp.healthporta.com/mcp"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "name": "com.healthporta/mcp",
+  "description": "Remote MCP server for HealthPorta healthcare plan, provider, pharmacy, and pricing workflows.",
+  "repository": {
+    "url": "https://github.com/EndurantDevs/ai-healthporta",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.healthporta.com/mcp"
+    }
+  ]
+}

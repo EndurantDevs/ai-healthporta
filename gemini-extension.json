@@ -1,0 +1,12 @@
+{
+  "name": "healthporta",
+  "version": "0.1.0",
+  "mcpServers": {
+    "healthporta": {
+      "httpUrl": "https://mcp.healthporta.com/mcp",
+      "oauth": {
+        "enabled": true
+      }
+    }
+  }
+}

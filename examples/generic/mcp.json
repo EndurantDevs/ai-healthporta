@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "healthporta": {
+      "type": "streamable-http",
+      "url": "https://mcp.healthporta.com/mcp",
+      "oauth": {
+        "enabled": true
+      }
+    }
+  }
+}

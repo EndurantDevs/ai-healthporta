@@ -1,0 +1,19 @@
+{
+  "name": "healthporta-mcp",
+  "description": "HealthPorta MCP plugin for Claude",
+  "version": "0.1.0",
+  "author": {
+    "name": "EndurantDevs LLC",
+    "url": "https://github.com/EndurantDevs/ai-healthporta"
+  },
+  "homepage": "https://www.healthporta.com",
+  "repository": "https://github.com/EndurantDevs/ai-healthporta",
+  "license": "MIT",
+  "keywords": [
+    "healthporta",
+    "mcp",
+    "healthcare",
+    "plans",
+    "pharmacy"
+  ]
+}
