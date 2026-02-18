@@ -18,6 +18,7 @@ ARTIFACTS = [
     "examples/codex/mcp.json",
     "examples/chatgpt/mcp.json",
     "examples/generic/mcp.json",
+    "examples/openclaw/mcp.json",
     "skills/healthporta-workflow/SKILL.md",
     "skills/mcp-auth-troubleshooting/SKILL.md",
 ]
@@ -41,6 +42,7 @@ def main() -> int:
     shutil.copy2(ROOT / "examples/codex/mcp.json", DIST / "codex-mcp.json")
     shutil.copy2(ROOT / "examples/chatgpt/mcp.json", DIST / "chatgpt-mcp.json")
     shutil.copy2(ROOT / "examples/generic/mcp.json", DIST / "generic-mcp.json")
+    shutil.copy2(ROOT / "examples/openclaw/mcp.json", DIST / "openclaw-mcp.json")
 
     print("release artifacts prepared in dist/")
     return 0

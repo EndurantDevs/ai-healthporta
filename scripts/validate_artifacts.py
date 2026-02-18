@@ -20,6 +20,7 @@ JSON_FILES = [
     "examples/codex/mcp.json",
     "examples/chatgpt/mcp.json",
     "examples/generic/mcp.json",
+    "examples/openclaw/mcp.json",
 ]
 
 
@@ -71,6 +72,9 @@ def main() -> int:
 
     generic_mcp = load_json(ROOT / "examples/generic/mcp.json")
     assert_endpoint(generic_mcp["mcpServers"]["healthporta"]["url"], "examples/generic/mcp.json", errors)
+
+    openclaw_mcp = load_json(ROOT / "examples/openclaw/mcp.json")
+    assert_endpoint(openclaw_mcp["mcpServers"]["healthporta"]["url"], "examples/openclaw/mcp.json", errors)
 
     if errors:
         for err in errors:

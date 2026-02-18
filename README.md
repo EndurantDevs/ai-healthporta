@@ -13,6 +13,7 @@ Public integration pack for connecting AI clients to the HealthPorta MCP server.
 | Gemini | `gemini-extension.json` | Supported |
 | Claude | `providers/claude/plugin/.mcp.json` | Supported |
 | Cursor | `providers/cursor/plugin/mcp.json` | Supported |
+| OpenClaw | `examples/openclaw/mcp.json` | Supported |
 | Codex/CLI | `examples/codex/mcp.json` | Supported |
 | ChatGPT-compatible | `examples/chatgpt/mcp.json` | Supported |
 | Generic MCP clients | `examples/generic/mcp.json` | Supported |
@@ -37,6 +38,11 @@ Public integration pack for connecting AI clients to the HealthPorta MCP server.
 ### Codex/CLI
 1. Add server URL from `examples/codex/mcp.json`.
 2. Run client auth command.
+3. Verify with `healthporta_healthcheck`.
+
+### OpenClaw
+1. Use `examples/openclaw/mcp.json` as MCP config.
+2. Authenticate with OAuth.
 3. Verify with `healthporta_healthcheck`.
 
 ## Public OAuth/Discovery Endpoints
