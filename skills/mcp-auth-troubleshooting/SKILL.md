@@ -3,6 +3,20 @@ description: Public OAuth and connectivity troubleshooting for HealthPorta MCP
 alwaysApply: false
 ---
 
+## Codex transport mismatch
+
+If Codex reports `No such file or directory (os error 2)` during MCP startup or lists `Auth: Unsupported`:
+
+1. Inspect current MCP config:
+   - `codex mcp get healthporta`
+2. If output shows `transport: stdio`, recreate as URL transport:
+   - `codex mcp remove healthporta`
+   - `codex mcp add healthporta --url https://mcp.healthporta.com/mcp`
+   - `codex mcp login healthporta`
+3. Confirm fixed state:
+   - `codex mcp get healthporta` includes `transport: streamable_http`
+   - `codex mcp list` shows `Auth: OAuth` for `healthporta`
+
 ## OAuth discovery issues
 
 If a client reports OAuth discovery failure:

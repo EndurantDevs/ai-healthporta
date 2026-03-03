@@ -7,6 +7,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 ENDPOINT = "https://mcp.healthporta.com/mcp"
+CODEX_MCP_TYPE = "http"
 
 JSON_FILES = [
     "gemini-extension.json",
@@ -21,6 +22,7 @@ JSON_FILES = [
     "examples/chatgpt/mcp.json",
     "examples/generic/mcp.json",
     "examples/openclaw/mcp.json",
+    "dist/codex-mcp.json",
 ]
 
 
@@ -32,6 +34,11 @@ def load_json(path: Path) -> dict:
 def assert_endpoint(value: str, source: str, errors: list[str]) -> None:
     if value != ENDPOINT:
         errors.append(f"{source}: expected endpoint {ENDPOINT}, got {value}")
+
+
+def assert_type(value: str | None, expected: str, source: str, errors: list[str]) -> None:
+    if value != expected:
+        errors.append(f"{source}: expected type {expected}, got {value}")
 
 
 def main() -> int:
@@ -66,6 +73,11 @@ def main() -> int:
 
     codex_mcp = load_json(ROOT / "examples/codex/mcp.json")
     assert_endpoint(codex_mcp["mcpServers"]["healthporta"]["url"], "examples/codex/mcp.json", errors)
+    assert_type(codex_mcp["mcpServers"]["healthporta"].get("type"), CODEX_MCP_TYPE, "examples/codex/mcp.json", errors)
+
+    dist_codex_mcp = load_json(ROOT / "dist/codex-mcp.json")
+    assert_endpoint(dist_codex_mcp["mcpServers"]["healthporta"]["url"], "dist/codex-mcp.json", errors)
+    assert_type(dist_codex_mcp["mcpServers"]["healthporta"].get("type"), CODEX_MCP_TYPE, "dist/codex-mcp.json", errors)
 
     chatgpt_mcp = load_json(ROOT / "examples/chatgpt/mcp.json")
     assert_endpoint(chatgpt_mcp["mcpServers"]["healthporta"]["url"], "examples/chatgpt/mcp.json", errors)

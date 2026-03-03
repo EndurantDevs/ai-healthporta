@@ -36,9 +36,22 @@ Public integration pack for connecting AI clients to the HealthPorta MCP server.
 3. Verify with `healthporta_healthcheck`.
 
 ### Codex/CLI
-1. Add server URL from `examples/codex/mcp.json`.
-2. Run client auth command.
-3. Verify with `healthporta_healthcheck`.
+1. Add HealthPorta as a URL-based MCP server:
+   ```bash
+   codex mcp add healthporta --url https://mcp.healthporta.com/mcp
+   ```
+2. Authenticate:
+   ```bash
+   codex mcp login healthporta
+   ```
+3. Confirm Codex is using HTTP transport:
+   ```bash
+   codex mcp get healthporta
+   # expected: transport: streamable_http
+   codex mcp list
+   # expected: Auth OAuth for healthporta
+   ```
+4. Verify with `healthporta_healthcheck`.
 
 ### OpenClaw
 1. Use `examples/openclaw/mcp.json` as MCP config.
@@ -63,6 +76,15 @@ Public integration pack for connecting AI clients to the HealthPorta MCP server.
 
 ## Troubleshooting
 
+- `No such file or directory (os error 2)` or `Auth: Unsupported` in Codex:
+  - Codex likely saved the URL as a stdio command (for example: `codex mcp add healthporta https://mcp.healthporta.com/mcp`).
+  - Recreate the server with `--url`:
+    ```bash
+    codex mcp remove healthporta
+    codex mcp add healthporta --url https://mcp.healthporta.com/mcp
+    codex mcp login healthporta
+    ```
+  - Re-check with `codex mcp get healthporta` and confirm `transport: streamable_http`.
 - `Failed to discover OAuth configuration`:
   - Check that `.well-known` endpoints are reachable.
 - `Invalid Host header`:
