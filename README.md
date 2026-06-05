@@ -51,6 +51,8 @@ Public integration pack for connecting AI clients to the HealthPorta MCP server.
    codex mcp list
    # expected: Auth OAuth for healthporta
    ```
+   - When using generic MCP resource APIs, pass server id `healthporta`.
+   - Do not use `mcp__healthporta__` as a server id (that is a tool namespace label, not the MCP server name).
 4. Verify with `healthporta_healthcheck`.
 
 ### OpenClaw
@@ -73,6 +75,16 @@ Public integration pack for connecting AI clients to the HealthPorta MCP server.
 - For pharmacy geo search, combine `name_like` with chain filtering:
   - canonical: `network`, `network_aliases`
   - aliases accepted by this MCP layer in pharmacy context: `chain`, `chain_aliases`
+- Client MRF coverage/import tools use the active OAuth session and route through
+  HealthPorta's public API layer. Use `search_mrf_sources`, `search_group_plans`,
+  `submit_mrf_index_source`, `subscribe_group_plan`, `list_import_requests`,
+  `start_import_request`, `get_import_request_status`, and `cancel_import_request`
+  for client-visible source search, group-plan subscriptions, and import requests.
+- Admin import orchestration tools such as `list_imports`, `fetch_group_plan_catalog`,
+  `resolve_group_plan_imports`, `dispatch_group_plan_imports`, and
+  `replicate_group_plan_import` are admin-scoped. They are visible only when the MCP
+  server is connected to HealthPorta import-control and the caller has the required
+  delegated admin authorization.
 
 ## Troubleshooting
 
@@ -85,6 +97,9 @@ Public integration pack for connecting AI clients to the HealthPorta MCP server.
     codex mcp login healthporta
     ```
   - Re-check with `codex mcp get healthporta` and confirm `transport: streamable_http`.
+- `unknown MCP server 'mcp__healthporta__'`:
+  - Use MCP server id `healthporta` from `codex mcp list`.
+  - `mcp__healthporta__` is an internal tool namespace label and is not accepted as the `server` argument.
 - `Failed to discover OAuth configuration`:
   - Check that `.well-known` endpoints are reachable.
 - `Invalid Host header`:

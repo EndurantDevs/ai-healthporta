@@ -20,6 +20,20 @@ For pharmacy geo lookups:
 - Canonical chain keys: `network`, `network_aliases`.
 - Accepted MCP aliases in pharmacy context: `chain`, `chain_aliases`.
 
+## MRF coverage and import guidance
+
+For client-visible MRF coverage workflows:
+- Search public and client-visible sources with `search_mrf_sources`.
+- Search discovered group plans with `search_group_plans`.
+- Submit a payer or employer MRF index/TOC URL with `submit_mrf_index_source`.
+- Subscribe to a discovered group plan with `subscribe_group_plan`.
+- Track import work with `list_import_requests`, `get_import_request_status`, and `cancel_import_request`.
+- Start an explicit PTG import request with `start_import_request` only when the user asks to queue import work.
+
+For admin import orchestration, use admin tools such as `list_imports`,
+`fetch_group_plan_catalog`, `resolve_group_plan_imports`, `dispatch_group_plan_imports`,
+and `replicate_group_plan_import` only when the authenticated session has admin import-control access.
+
 ## Batch guidance
 
 For `call_api_batch` and `call_api_read_batch` request items, either form is supported:

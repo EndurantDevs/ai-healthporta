@@ -17,6 +17,14 @@ If Codex reports `No such file or directory (os error 2)` during MCP startup or 
    - `codex mcp get healthporta` includes `transport: streamable_http`
    - `codex mcp list` shows `Auth: OAuth` for `healthporta`
 
+## Codex server-id mismatch
+
+If Codex reports `unknown MCP server 'mcp__healthporta__'`:
+
+1. Use the configured server id from `codex mcp list` (expected: `healthporta`).
+2. For generic MCP resource APIs, pass `server: "healthporta"`.
+3. Do not pass `mcp__healthporta__` as `server`; that label is only a tool namespace prefix.
+
 ## OAuth discovery issues
 
 If a client reports OAuth discovery failure:
