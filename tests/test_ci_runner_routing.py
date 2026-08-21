@@ -12,6 +12,8 @@ ARC_RUNNER = (
     "vars.AI_HEALTHPORTA_CI_RUNNER || 'ubuntu-latest' }}"
 )
 PINNED_ACTION = re.compile(r"^[^./\s][^@\s]*@[0-9a-f]{40}$")
+STEP = re.compile(r"(?ms)^      - (?P<body>.*?)(?=^      - |\Z)")
+RELEASE_ACTION = "softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228"
 
 
 class CiRunnerRoutingTests(unittest.TestCase):
@@ -30,10 +32,16 @@ class CiRunnerRoutingTests(unittest.TestCase):
         for path in sorted(WORKFLOWS.glob("*.yml")):
             workflow = path.read_text()
             actions = re.findall(r"uses:\s+([^\s#]+)", workflow)
+            self.assertTrue(actions, path.name)
             self.assertTrue(all(PINNED_ACTION.fullmatch(action) for action in actions), path.name)
-            self.assertGreaterEqual(
-                workflow.count("persist-credentials: false"),
-                workflow.count("uses: actions/checkout@"),
+            checkouts = [
+                block
+                for block in STEP.findall(workflow)
+                if "uses: actions/checkout@" in block
+            ]
+            self.assertTrue(checkouts, path.name)
+            self.assertTrue(
+                all("persist-credentials: false" in block for block in checkouts),
                 path.name,
             )
 
@@ -43,6 +51,10 @@ class CiRunnerRoutingTests(unittest.TestCase):
             workflow.index("python3 scripts/package_release.py"),
             workflow.index("python3 scripts/validate_artifacts.py"),
         )
+
+        release = (WORKFLOWS / "release-artifacts.yml").read_text()
+        self.assertIn("    permissions:\n      contents: write", release)
+        self.assertIn(f"uses: {RELEASE_ACTION}", release)
 
 
 if __name__ == "__main__":
