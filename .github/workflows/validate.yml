@@ -4,13 +4,14 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   validate-artifacts:
-    runs-on: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AI_HEALTHPORTA_CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && vars.AI_HEALTHPORTA_CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -27,7 +28,7 @@ jobs:
         run: python3 scripts/validate_artifacts.py
 
   conformance-smoke:
-    runs-on: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AI_HEALTHPORTA_CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && vars.AI_HEALTHPORTA_CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0

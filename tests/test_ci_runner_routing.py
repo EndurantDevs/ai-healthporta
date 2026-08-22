@@ -7,9 +7,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github/workflows"
-ARC_RUNNER = (
+PUSH_MAIN_ARC_RUNNER = (
     "${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && "
     "vars.AI_HEALTHPORTA_CI_RUNNER || 'ubuntu-latest' }}"
+)
+TRUSTED_MAIN_ARC_RUNNER = (
+    "${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') "
+    "&& github.ref == 'refs/heads/main' && vars.AI_HEALTHPORTA_CI_RUNNER || "
+    "'ubuntu-latest' }}"
 )
 PINNED_ACTION = re.compile(r"^[^./\s][^@\s]*@[0-9a-f]{40}$")
 STEP = re.compile(r"(?ms)^      - (?P<body>.*?)(?=^      - |\Z)")
@@ -17,12 +22,14 @@ RELEASE_ACTION = "softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99
 
 
 class CiRunnerRoutingTests(unittest.TestCase):
-    def test_only_push_main_validation_uses_the_optional_arc_route(self) -> None:
+    def test_only_trusted_main_validation_uses_the_optional_arc_route(self) -> None:
         content_guard = (WORKFLOWS / "content-guard.yml").read_text()
         validate = (WORKFLOWS / "validate.yml").read_text()
 
-        self.assertEqual(content_guard.count(f"runs-on: {ARC_RUNNER}"), 1)
-        self.assertEqual(validate.count(f"runs-on: {ARC_RUNNER}"), 2)
+        self.assertEqual(content_guard.count(f"runs-on: {PUSH_MAIN_ARC_RUNNER}"), 1)
+        self.assertNotIn("workflow_dispatch:", content_guard)
+        self.assertEqual(validate.count(f"runs-on: {TRUSTED_MAIN_ARC_RUNNER}"), 2)
+        self.assertIn("workflow_dispatch:", validate)
         for name in ("conformance-nightly.yml", "release-artifacts.yml"):
             workflow = (WORKFLOWS / name).read_text()
             self.assertNotIn("AI_HEALTHPORTA_CI_RUNNER", workflow)
