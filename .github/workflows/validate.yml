@@ -4,22 +4,36 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   validate-artifacts:
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && vars.AI_HEALTHPORTA_CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Verify CI routing contract
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
+
+      - name: Build distribution bundles
+        run: python3 scripts/package_release.py
 
       - name: Validate JSON artifacts and endpoint consistency
         run: python3 scripts/validate_artifacts.py
 
   conformance-smoke:
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && vars.AI_HEALTHPORTA_CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - name: Run lenient public endpoint smoke checks
         run: python3 scripts/conformance_smoke.py
