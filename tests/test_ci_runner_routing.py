@@ -38,6 +38,10 @@ class CiRunnerRoutingTests(unittest.TestCase):
     def test_actions_are_immutable_and_checkouts_drop_credentials(self) -> None:
         for path in sorted(WORKFLOWS.glob("*.yml")):
             workflow = path.read_text()
+            if path.name == "artifact-cleanup.yml":
+                self.assertNotIn("uses:", workflow)
+                self.assertNotIn("actions/checkout@", workflow)
+                continue
             actions = re.findall(r"uses:\s+([^\s#]+)", workflow)
             self.assertTrue(actions, path.name)
             self.assertTrue(all(PINNED_ACTION.fullmatch(action) for action in actions), path.name)
@@ -62,6 +66,30 @@ class CiRunnerRoutingTests(unittest.TestCase):
         release = (WORKFLOWS / "release-artifacts.yml").read_text()
         self.assertIn("    permissions:\n      contents: write", release)
         self.assertIn(f"uses: {RELEASE_ACTION}", release)
+
+    def test_artifacts_expire_and_cleanup_runs_only_after_consumers(self) -> None:
+        release = (WORKFLOWS / "release-artifacts.yml").read_text()
+        self.assertIn("retention-days: 1", release)
+
+        cleanup = (WORKFLOWS / "artifact-cleanup.yml").read_text()
+        self.assertIn("workflows: [release-artifacts]", cleanup)
+        self.assertIn("types: [completed]", cleanup)
+        self.assertIn("workflow_run.conclusion == 'success'", cleanup)
+        self.assertIn("group: actions-artifact-cleanup\n", cleanup)
+        self.assertIn("queue: max\n", cleanup)
+        self.assertNotIn("github.event.workflow_run.id || github.run_id", cleanup)
+        self.assertIn(
+            "/actions/runs/${RUN_ID}/artifacts?per_page=100",
+            cleanup,
+        )
+        self.assertEqual(cleanup.count('artifact_ids="$(mktemp)"'), 2)
+        self.assertEqual(cleanup.count('trap \'rm -f "$artifact_ids"\' EXIT'), 2)
+        self.assertEqual(cleanup.count('done < "$artifact_ids"'), 2)
+
+        stale = cleanup.split("  delete-stale-artifacts:", maxsplit=1)[1]
+        self.assertIn("1 day ago", stale)
+        self.assertIn(".expired == false and .created_at < $cutoff", stale)
+        self.assertNotIn("/actions/runs/", stale)
 
 
 if __name__ == "__main__":
