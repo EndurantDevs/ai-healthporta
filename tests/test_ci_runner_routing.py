@@ -76,6 +76,7 @@ class CiRunnerRoutingTests(unittest.TestCase):
         self.assertIn("types: [completed]", cleanup)
         self.assertIn("workflow_run.conclusion == 'success'", cleanup)
         self.assertIn("group: actions-artifact-cleanup\n", cleanup)
+        self.assertIn("queue: max\n", cleanup)
         self.assertNotIn("github.event.workflow_run.id || github.run_id", cleanup)
         self.assertIn(
             "/actions/runs/${RUN_ID}/artifacts?per_page=100",
