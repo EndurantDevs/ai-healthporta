@@ -86,7 +86,7 @@ class CiRunnerRoutingTests(unittest.TestCase):
         stale = cleanup.split("  delete-stale-artifacts:", maxsplit=1)[1]
         self.assertIn("1 day ago", stale)
         self.assertIn(".expired == false and .created_at < $cutoff", stale)
-        self.assertNotIn("actions/runs/${run_id}", stale)
+        self.assertNotIn("/actions/runs/", stale)
 
 
 if __name__ == "__main__":
