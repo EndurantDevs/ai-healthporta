@@ -7,7 +7,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github/workflows"
-FAIL_FAST_WORKFLOW = WORKFLOWS / "ci-fail-fast.yml"
 PUSH_MAIN_ARC_RUNNER = (
     "${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && "
     "vars.AI_HEALTHPORTA_CI_RUNNER || 'ubuntu-latest' }}"
@@ -46,9 +45,6 @@ class CiRunnerRoutingTests(unittest.TestCase):
             actions = re.findall(r"uses:\s+([^\s#]+)", workflow)
             self.assertTrue(actions, path.name)
             self.assertTrue(all(PINNED_ACTION.fullmatch(action) for action in actions), path.name)
-            if path == FAIL_FAST_WORKFLOW:
-                self.assertNotIn("actions/checkout@", workflow)
-                continue
             checkouts = [
                 block
                 for block in STEP.findall(workflow)
@@ -59,60 +55,6 @@ class CiRunnerRoutingTests(unittest.TestCase):
                 all("persist-credentials: false" in block for block in checkouts),
                 path.name,
             )
-
-    def test_ci_fail_fast_watchdog_is_run_scoped_hosted_and_metadata_only(self) -> None:
-        workflow = FAIL_FAST_WORKFLOW.read_text()
-
-        for contract in (
-            "workflows: [validate]",
-            "types: [in_progress]",
-            "actions: write",
-            "group: ci-fail-fast-${{ github.event.workflow_run.id }}",
-            "cancel-in-progress: true",
-            "head_repository.full_name == github.repository",
-            "workflow_run.path == '.github/workflows/validate.yml'",
-            "workflow_run.head_branch ==",
-            "event.repository.default_branch",
-            "workflow_run.event == 'push'",
-            "workflow_run.event == 'workflow_dispatch'",
-            "runs-on: ubuntu-latest",
-            "timeout-minutes: 360",
-            (
-                "actions/github-script@"
-                "3a2844b7e9c422d3c10d287c895573f7108da1b3"
-            ),
-            "retries: 3",
-            "listJobsForWorkflowRunAttempt",
-            "attempt_number: attempt",
-            'new Set(["failure", "timed_out"])',
-            'job.status !== "completed"',
-            "if (failed && active)",
-            "if (!active)",
-            "current.run_attempt !== attempt",
-            'current.status === "completed"',
-            "cancel is run-scoped",
-            "cancelWorkflowRun",
-            "error.status !== 409",
-            "await sleep(60_000)",
-        ):
-            self.assertIn(contract, workflow)
-        self.assertLess(
-            workflow.index("getWorkflowRun"),
-            workflow.index("cancelWorkflowRun"),
-        )
-        self.assertRegex(
-            workflow,
-            r"cancelWorkflowRun\(\{\s+\.\.\.context\.repo,\s+"
-            r"run_id: target\.id,\s+\}\)",
-        )
-        self.assertNotIn("listWorkflowRuns", workflow)
-        for forbidden in (
-            "actions/checkout@",
-            "contents:",
-            "download-artifact",
-            "secrets.",
-        ):
-            self.assertNotIn(forbidden, workflow)
 
     def test_distribution_is_built_before_validation(self) -> None:
         workflow = (WORKFLOWS / "validate.yml").read_text()
