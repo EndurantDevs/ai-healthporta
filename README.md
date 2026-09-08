@@ -181,3 +181,5 @@ writer from impersonating a check from the GitHub Actions app.
 ## Maintenance
 
 This integration is maintained by **EndurantDevs LLC** (nick@endurantdev.com).
+
+<!-- Release policy metadata routing probe; close without merging. -->
