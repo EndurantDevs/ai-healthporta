@@ -12,6 +12,7 @@ jobs:
       contents: write
       actions: read
       checks: read
+      pull-requests: read
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

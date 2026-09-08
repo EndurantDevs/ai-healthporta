@@ -19,6 +19,7 @@ CHECKS = {
     "content-guard.yml": {"content-guard"},
 }
 GITHUB_ACTIONS_APP = 15368
+POLICY_STATUS = "release-policy"
 
 
 def require(condition: bool, message: str) -> None:
@@ -26,14 +27,16 @@ def require(condition: bool, message: str) -> None:
         raise ValueError(message)
 
 
-def api(path: str) -> dict | list:
+def api(path: str, data: dict | None = None) -> dict | list:
     request = urllib.request.Request(
         f"https://api.github.com/repos/{REPOSITORY}/{path}",
         headers={
             "Accept": "application/vnd.github+json",
+            "Content-Type": "application/json",
             "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
             "X-GitHub-Api-Version": "2022-11-28",
         },
+        data=json.dumps(data).encode() if data is not None else None,
     )
     with urllib.request.urlopen(request, timeout=30) as response:
         return json.load(response)
@@ -85,6 +88,26 @@ def accepted_validation(sha: str, branch: str) -> list[dict]:
     return evidence
 
 
+def accepted_dev(release: dict) -> str:
+    footer = release["commit"]["message"].strip().split("\n\n")[-1].splitlines()
+    trailers = [line for line in footer if line.startswith("Accepted-Dev:")]
+    require(len(trailers) == 1 and bool(re.fullmatch(r"Accepted-Dev: [0-9a-f]{40}", trailers[0])),
+            "release commit requires one Accepted-Dev: <40-character SHA> trailer")
+    return trailers[0].split(": ", 1)[1]
+
+
+def release_commit(pr: dict) -> dict:
+    require(pr["head"]["repo"]["full_name"] == REPOSITORY
+            and pr["head"]["ref"] not in {"main", "dev"},
+            "main releases must use a temporary same-repository branch")
+    commits = pages(f"pulls/{int(pr['number'])}/commits")
+    require(len(commits) == 1 and commits[0]["sha"] == pr["head"]["sha"],
+            "main release pull request must contain exactly one commit")
+    release = commit(pr["head"]["sha"])
+    require(len(release["parents"]) == 1, "release commit must have only one parent")
+    return release
+
+
 def pull_request(event: dict) -> dict:
     current = api(f"pulls/{int(event['number'])}")
     require(current["state"] == "open" and current["base"]["repo"]["full_name"] == REPOSITORY,
@@ -95,24 +118,85 @@ def pull_request(event: dict) -> dict:
     if current["base"]["ref"] == "dev":
         return {"target": "dev", "head_sha": current["head"]["sha"]}
     require(current["base"]["ref"] == "main", "ordinary pull requests must target dev")
-    require(current["head"]["repo"]["full_name"] == REPOSITORY
-            and current["head"]["ref"] not in {"main", "dev"},
-            "main releases must use a temporary same-repository branch")
     main, dev = commit("main"), commit("dev")
-    commits = pages(f"pulls/{int(event['number'])}/commits")
-    require(current["base"]["sha"] == main["sha"] and len(commits) == 1
-            and commits[0]["sha"] == current["head"]["sha"],
-            "main release must contain exactly one commit against current main")
-    release = commit(current["head"]["sha"])
+    release = release_commit(current)
+    require(current["base"]["sha"] == main["sha"], "release base must be current main")
     require([parent["sha"] for parent in release["parents"]] == [main["sha"]],
             "release commit must have current main as its only parent")
-    require(release["commit"]["tree"]["sha"] == dev["commit"]["tree"]["sha"],
-            "release tree must exactly match current dev")
+    require(accepted_dev(release) == dev["sha"]
+            and release["commit"]["tree"]["sha"] == dev["commit"]["tree"]["sha"],
+            "release trailer and tree must exactly match current dev")
     evidence = accepted_validation(dev["sha"], "dev")
     require(commit("main")["sha"] == main["sha"] and commit("dev")["sha"] == dev["sha"],
             "release branches moved during validation")
     return {"target": "main", "head_sha": release["sha"], "dev_sha": dev["sha"],
             "tree_sha": dev["commit"]["tree"]["sha"], "validation": evidence}
+
+
+def report_pull_request(event: dict) -> dict:
+    """Post the protected-main policy result to the exact PR head, never PR code."""
+    sha = event["pull_request"]["head"]["sha"]
+    require(bool(re.fullmatch(r"[0-9a-f]{40}", sha)), "invalid PR head SHA")
+    base = event["pull_request"]["base"]["ref"]
+    context = POLICY_STATUS + "/" + (base if base in {"main", "dev"} else "invalid")
+    target = f"https://github.com/{REPOSITORY}/actions/runs/{int(os.environ['GITHUB_RUN_ID'])}"
+
+    def status(state: str) -> None:
+        api(f"statuses/{sha}", {"state": state, "context": context,
+                               "target_url": target,
+                               "description": "Protected-main release policy: " + state})
+
+    status("pending")
+    try:
+        require(os.environ["GITHUB_EVENT_NAME"] == "pull_request_target"
+                and os.environ["GITHUB_REF"] == "refs/heads/main",
+                "policy reporting requires the protected main PR target workflow")
+        checkout = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+        require(checkout == os.environ["GITHUB_SHA"] == commit("main")["sha"],
+                "policy checkout must be the current main event commit")
+        result = pull_request(event)
+        require(commit("main")["sha"] == checkout, "policy main moved during validation")
+        current = api(f"pulls/{int(event['number'])}")
+        require(current["state"] == "open" and current["head"]["sha"] == sha
+                and current["base"]["ref"] == base, "PR changed during policy reporting")
+    except Exception:
+        status("failure")
+        raise
+    status("success")
+    return result
+
+
+def merged_release(main: dict) -> dict:
+    prs = []
+    for associated in pages(f"commits/{main['sha']}/pulls"):
+        if associated["base"]["ref"] != "main":
+            continue
+        pr = api(f"pulls/{int(associated['number'])}")
+        if (pr["merged"] and pr["state"] == "closed"
+                and pr["base"]["ref"] == "main"
+                and pr["base"]["repo"]["full_name"] == REPOSITORY
+                and pr["merge_commit_sha"] == main["sha"]):
+            prs.append(pr)
+    require(len(prs) == 1, "current main requires one authenticated merged release PR")
+    pr = prs[0]
+    release = release_commit(pr)
+    dev_sha = accepted_dev(release)
+    dev, current_dev = commit(dev_sha), commit("dev")
+    require(len(main["parents"]) == 1
+            and [parent["sha"] for parent in main["parents"]]
+            == [parent["sha"] for parent in release["parents"]]
+            and main["commit"]["tree"]["sha"] == release["commit"]["tree"]["sha"]
+            == dev["commit"]["tree"]["sha"] and accepted_dev(main) == dev_sha,
+            "merged main must preserve the release parent, DEV trailer and exact DEV tree")
+    ancestry = api(f"compare/{dev_sha}...{current_dev['sha']}")
+    require(ancestry["status"] in {"ahead", "identical"}
+            and ancestry["merge_base_commit"]["sha"] == dev_sha,
+            "accepted DEV commit must remain in dev history")
+    evidence = accepted_validation(dev_sha, "dev")
+    require(commit("dev")["sha"] == current_dev["sha"], "dev moved during validation")
+    return {"pr_number": pr["number"], "head_sha": release["sha"],
+            "dev_sha": dev_sha, "tree_sha": dev["commit"]["tree"]["sha"],
+            "validation": evidence}
 
 
 def publication(event_name: str, ref: str, checkout_sha: str) -> dict:
@@ -122,21 +206,26 @@ def publication(event_name: str, ref: str, checkout_sha: str) -> dict:
     main = commit("main")
     require(checkout_sha == main["sha"] == commit(ref)["sha"],
             "release checkout and requested ref must resolve to current main")
+    mapping = merged_release(main)
     evidence = accepted_validation(main["sha"], "main")
     require(commit("main")["sha"] == main["sha"] and commit(ref)["sha"] == main["sha"],
             "release ref moved during validation")
     return {"main_sha": main["sha"], "tree_sha": main["commit"]["tree"]["sha"],
-            "validation": evidence}
+            "release": mapping, "validation": evidence}
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=["pull-request", "publication"])
+    parser.add_argument("mode", choices=["pull-request", "report-pull-request", "publication"])
     args = parser.parse_args()
     require(os.environ["GITHUB_REPOSITORY"] == REPOSITORY, "unexpected repository")
-    if args.mode == "pull-request":
-        require(os.environ["GITHUB_EVENT_NAME"] == "pull_request", "unexpected PR event")
-        result = pull_request(json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text()))
+    if args.mode in {"pull-request", "report-pull-request"}:
+        event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
+        if args.mode == "report-pull-request":
+            result = report_pull_request(event)
+        else:
+            require(os.environ["GITHUB_EVENT_NAME"] == "pull_request", "unexpected PR event")
+            result = pull_request(event)
     else:
         sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
         require(bool(re.fullmatch(r"[0-9a-f]{40}", sha)), "invalid checkout commit")

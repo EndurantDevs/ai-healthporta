@@ -144,17 +144,39 @@ content guard. `main` remains the default branch and the public release source.
 
 To release, create a temporary branch with one commit whose only parent is the
 current `main` commit and whose complete Git tree matches the current `dev`
-commit. Open its pull request against `main`. CI verifies these relationships
+commit. Add an `Accepted-Dev: <full dev commit SHA>` trailer to that commit and
+open its pull request against `main`. CI verifies these relationships
 through GitHub and requires successful checks from the exact `dev` push:
-`validate-artifacts`, `conformance-smoke`, and `content-guard`. Moving either
-branch invalidates that release candidate; refresh it before merging.
+`validate-artifacts`, `conformance-smoke`, and `content-guard`. Refresh the
+candidate after either branch moves and use **Rebase and merge**.
+
+The `release-policy/main` and `release-policy/dev` statuses come from a
+`pull_request_target` workflow whose
+workflow and checked-out helper are bound to the current protected `main` commit.
+It reads pull-request and commit metadata through GitHub, posts its result to the
+exact PR head, and never checks out or executes PR code. Ordinary source checks
+continue to run separately with read-only permissions. The target-specific
+statuses prevent a DEV routing pass from satisfying a main release gate.
 
 After the release reaches `main`, wait for the same checks on that exact main
 push. A `v*` tag pointing to current `main`, or an artifact-workflow dispatch from
-`main`, may then build and publish the integration bundles. The workflow verifies
-the commit and its successful validation before creating artifacts. Branch names
-and PR descriptions do not substitute for this evidence. Packaging remains a
-native Python operation.
+`main`, may then build and publish the integration bundles. Publication recovers
+the merged same-repository, single-commit release PR and verifies that its parent,
+tree and `Accepted-Dev` trailer were preserved in the resulting main commit.
+The selected DEV commit must retain its exact successful push checks and remain
+in `dev` history; newer DEV commits do not change an already merged release.
+The trailer is a selector, not an approval. Branch names and PR descriptions do
+not substitute for this evidence. Packaging remains a native Python operation.
+
+Repository settings complete this policy after its first delivery to `main`:
+protect `dev` and `main`, require the policy status and source checks, and restrict
+main releases to rebase merges. Version-tag creation is restricted to the trusted
+repository administrator, who must verify the current main release and checks
+before creating a tag. Separate rules prohibit version-tag updates and deletion,
+including for that creator. This prevents other actors from activating historical
+tag-publisher code. The settings and release process trust the repository owner;
+they do not claim to prevent an owner from changing policy or a trusted workflow
+writer from impersonating a check from the GitHub Actions app.
 
 ## Maintenance
 
