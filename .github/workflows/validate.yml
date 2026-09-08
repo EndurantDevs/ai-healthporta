@@ -3,11 +3,14 @@ name: validate
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [dev, main]
   workflow_dispatch:
 
 permissions:
   contents: read
+  pull-requests: read
+  actions: read
+  checks: read
 
 jobs:
   validate-artifacts:
@@ -18,7 +21,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Verify CI routing contract
+      - name: Verify pull-request routing and release identity
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/check_release_policy.py pull-request
+
+      - name: Verify CI routing and release contracts
         run: python3 -m unittest discover -s tests -p 'test_*.py'
 
       - name: Build distribution bundles

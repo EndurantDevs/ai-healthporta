@@ -30,6 +30,10 @@ class CiRunnerRoutingTests(unittest.TestCase):
         self.assertNotIn("workflow_dispatch:", content_guard)
         self.assertEqual(validate.count(f"runs-on: {TRUSTED_MAIN_ARC_RUNNER}"), 2)
         self.assertIn("workflow_dispatch:", validate)
+        self.assertIn("branches: [dev, main]", validate)
+        self.assertIn("branches: [dev, main]", content_guard)
+        self.assertIn("python3 scripts/check_release_policy.py pull-request", validate)
+        self.assertIn("  pull-requests: read", validate)
         for name in ("conformance-nightly.yml", "release-artifacts.yml"):
             workflow = (WORKFLOWS / name).read_text()
             self.assertNotIn("AI_HEALTHPORTA_CI_RUNNER", workflow)
@@ -66,6 +70,9 @@ class CiRunnerRoutingTests(unittest.TestCase):
         release = (WORKFLOWS / "release-artifacts.yml").read_text()
         self.assertIn("    permissions:\n      contents: write", release)
         self.assertIn(f"uses: {RELEASE_ACTION}", release)
+        self.assertLess(release.index("python3 scripts/check_release_policy.py publication"),
+                        release.index("python3 scripts/package_release.py"))
+        self.assertIn("      actions: read\n      checks: read", release)
 
     def test_artifacts_expire_and_cleanup_runs_only_after_consumers(self) -> None:
         release = (WORKFLOWS / "release-artifacts.yml").read_text()

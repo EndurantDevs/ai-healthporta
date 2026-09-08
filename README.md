@@ -136,6 +136,26 @@ This is a public repository.
 
 CI enforces this policy.
 
+### Contribution and release flow
+
+Send ordinary pull requests to `dev`. Pull requests and pushes to `dev` run
+artifact validation, the existing public endpoint conformance checks, and the
+content guard. `main` remains the default branch and the public release source.
+
+To release, create a temporary branch with one commit whose only parent is the
+current `main` commit and whose complete Git tree matches the current `dev`
+commit. Open its pull request against `main`. CI verifies these relationships
+through GitHub and requires successful checks from the exact `dev` push:
+`validate-artifacts`, `conformance-smoke`, and `content-guard`. Moving either
+branch invalidates that release candidate; refresh it before merging.
+
+After the release reaches `main`, wait for the same checks on that exact main
+push. A `v*` tag pointing to current `main`, or an artifact-workflow dispatch from
+`main`, may then build and publish the integration bundles. The workflow verifies
+the commit and its successful validation before creating artifacts. Branch names
+and PR descriptions do not substitute for this evidence. Packaging remains a
+native Python operation.
+
 ## Maintenance
 
 This integration is maintained by **EndurantDevs LLC** (nick@endurantdev.com).
