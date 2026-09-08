@@ -30,6 +30,10 @@ class CiRunnerRoutingTests(unittest.TestCase):
         self.assertNotIn("workflow_dispatch:", content_guard)
         self.assertEqual(validate.count(f"runs-on: {TRUSTED_MAIN_ARC_RUNNER}"), 2)
         self.assertIn("workflow_dispatch:", validate)
+        self.assertIn("branches: [dev, main]", validate)
+        self.assertIn("branches: [dev, main]", content_guard)
+        self.assertIn("python3 scripts/check_release_policy.py pull-request", validate)
+        self.assertIn("  pull-requests: read", validate)
         for name in ("conformance-nightly.yml", "release-artifacts.yml"):
             workflow = (WORKFLOWS / name).read_text()
             self.assertNotIn("AI_HEALTHPORTA_CI_RUNNER", workflow)
@@ -42,7 +46,7 @@ class CiRunnerRoutingTests(unittest.TestCase):
                 self.assertNotIn("uses:", workflow)
                 self.assertNotIn("actions/checkout@", workflow)
                 continue
-            actions = re.findall(r"uses:\s+([^\s#]+)", workflow)
+            actions = re.findall(r"(?m)^\s+(?:- )?uses:\s+([^\s#]+)", workflow)
             self.assertTrue(actions, path.name)
             self.assertTrue(all(PINNED_ACTION.fullmatch(action) for action in actions), path.name)
             checkouts = [
@@ -66,6 +70,23 @@ class CiRunnerRoutingTests(unittest.TestCase):
         release = (WORKFLOWS / "release-artifacts.yml").read_text()
         self.assertIn("    permissions:\n      contents: write", release)
         self.assertIn(f"uses: {RELEASE_ACTION}", release)
+        self.assertLess(release.index("python3 scripts/check_release_policy.py publication"),
+                        release.index("python3 scripts/package_release.py"))
+        self.assertIn("      actions: read\n      checks: read", release)
+        self.assertIn("      pull-requests: read", release)
+
+    def test_release_policy_executes_only_main_metadata_code_and_reports_the_pr_head(self) -> None:
+        policy = (WORKFLOWS / "release-policy.yml").read_text()
+        self.assertIn("  pull_request_target:", policy)
+        self.assertIn("types: [opened, synchronize, reopened, edited, ready_for_review]", policy)
+        self.assertIn("ref: ${{ github.sha }}", policy)
+        self.assertIn("statuses: write", policy)
+        self.assertIn("python3 scripts/check_release_policy.py report-pull-request", policy)
+        self.assertEqual(policy.count("run:"), 1)
+        for forbidden in ("head.sha", "refs/pull/", "AI_HEALTHPORTA_CI_RUNNER", "secrets.",
+                          "package_release.py", "content-guard", "contents: write", "checks: write"):
+            self.assertNotIn(forbidden, policy)
+        self.assertNotIn("statuses: write", (WORKFLOWS / "validate.yml").read_text())
 
     def test_artifacts_expire_and_cleanup_runs_only_after_consumers(self) -> None:
         release = (WORKFLOWS / "release-artifacts.yml").read_text()
