@@ -138,11 +138,13 @@ CI enforces this policy.
 
 ### Contribution and release flow
 
-Send ordinary pull requests to `dev`. Pull requests and pushes to `dev` run
+Follow [CONTRIBUTING.md](CONTRIBUTING.md) and send ordinary pull requests to `dev`.
+Pull requests and pushes to `dev` run
 artifact validation, the existing public endpoint conformance checks, and the
 content guard. `main` remains the default branch and the public release source.
 
-To release, create a temporary branch with one commit whose only parent is the
+Release only on a separate human request after `dev` is stable and accepted.
+Create a temporary branch with one commit whose only parent is the
 current `main` commit and whose complete Git tree matches the current `dev`
 commit. Add an `Accepted-Dev: <full dev commit SHA>` trailer to that commit and
 open its pull request against `main`. CI verifies these relationships
