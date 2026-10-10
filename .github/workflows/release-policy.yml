@@ -11,6 +11,10 @@ permissions:
   checks: read
   statuses: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'pull_request_target' }}
+
 jobs:
   inspect-release-metadata:
     runs-on: ubuntu-latest
