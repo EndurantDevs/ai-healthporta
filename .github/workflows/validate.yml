@@ -12,6 +12,10 @@ permissions:
   actions: read
   checks: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'pull_request_target' }}
+
 jobs:
   validate-artifacts:
     runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && vars.AI_HEALTHPORTA_CI_RUNNER || 'ubuntu-latest' }}
